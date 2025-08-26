@@ -9,8 +9,8 @@ This guide explains how to set up and run a Flask application on **Windows**, in
 
 ### 1. Clone the Project (or download ZIP)
 ```bash
-git clone https://github.com/your-username/your-repo.git
-cd your-repo
+git clone git@github.com:asingo-paul/kf.git
+cd kf
 ````
 
 ---
