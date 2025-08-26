@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kwale FPM - Food Distribution</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css">
+    <style>
+        :root {
+            --primary-color: #2c7873;
+            --secondary-color: #6fb98f;
+            --accent-color: #f8b400;
+            --dark-color: #004445;
+            --light-color: #f8f9fa;
+            --sidebar-width: 250px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { display: flex; min-height: 100vh; background-color: #f5f5f5; }
+
+        /* Sidebar */
+        .sidebar { width: var(--sidebar-width); background-color: var(--dark-color); color: white; height: 100vh; position: fixed; }
+        .sidebar-header { padding: 20px; text-align: center; background-color: rgba(0,0,0,0.1); }
+        .sidebar-header h2 { font-size: 20px; }
+        .sidebar-header p { font-size: 12px; opacity: 0.8; }
+        .sidebar-menu { padding: 20px 0; }
+        .sidebar-menu ul { list-style: none; }
+        .sidebar-menu a { display: block; padding: 12px 20px; color: white; text-decoration: none; font-size: 14px; transition: 0.3s; }
+        .sidebar-menu a:hover, .sidebar-menu a.active { background-color: rgba(255,255,255,0.1); border-left: 3px solid var(--accent-color); }
+
+        /* Main */
+        .main-content { margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; margin-bottom: 20px; border-bottom: 1px solid #eee; }
+        .header h1 { font-size: 24px; color: var(--dark-color); }
+        .user-info { display: flex; align-items: center; }
+        .user-info img { width: 40px; height: 40px; border-radius: 50%; margin-right: 10px; }
+
+        /* Buttons */
+        .btn { padding: 10px 15px; border: none; border-radius: 5px; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover { background-color: var(--dark-color); }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-secondary:hover { background-color: #5a6268; }
+        .btn-export { background-color: #28a745; color: white; }
+        .btn-export:hover { background-color: #218838; }
+
+        /* Cards */
+        .stats-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 20px; transition: 0.3s; }
+        .card:hover { transform: translateY(-5px); }
+        .card-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
+
+        /* DataTable */
+        .data-table-container { background: white; border-radius: 8px; padding: 20px; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000; }
+        .modal-content { background: white; border-radius: 10px; padding: 20px; width: 600px; max-width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+        .modal-header h3 { margin: 0; color: var(--dark-color); }
+        .close-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #333; }
+
+        .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+        .form-group label { margin-bottom: 5px; font-weight: 500; }
+        .form-control { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; width: 100%; }
+        .form-row { display: flex; gap: 15px; }
+        .form-row .form-group { flex: 1; }
+
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
+
+        /* Export Modal */
+        .export-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 20px 0; }
+        .export-option { border: 1px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .export-option:hover { border-color: var(--primary-color); background-color: #f8f9fa; }
+        .export-option i { font-size: 24px; margin-bottom: 10px; color: var(--primary-color); }
+        .export-option.selected { border-color: var(--primary-color); background-color: rgba(44, 120, 115, 0.1); }
+        
+        /* Date Range Picker */
+        .date-range { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Kwale FPM</h2>
+            <p>Management System</p>
+        </div>
+        <div class="sidebar-menu">
+            <ul>
+                <li><a href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('beneficiaries') }}"><i class="fas fa-users"></i> Beneficiaries</a></li>
+                <li><a href="{{ url_for('funds') }}"><i class="fas fa-money-bill-wave"></i> Fund Tracking</a></li>
+                <li><a href="{{ url_for('distributions') }}" class="active"><i class="fas fa-utensils"></i> Food Distribution</a></li>
+                <li><a href="{{ url_for('reports') }}"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                <li><a href="{{ url_for('settings') }}"><i class="fas fa-cog"></i> Settings</a></li>
+                <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <h1>Food Distribution</h1>
+            <div class="user-info">
+                <img src="https://ui-avatars.com/api/?name={{ session.full_name }}" alt="User">
+                <div>
+                    <h4>{{ session.full_name }}</h4>
+                    <p>{{ session.role|capitalize }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-cards">
+            <div class="card">
+                <div class="card-header"><div>Total Distributions</div><i class="fas fa-utensils"></i></div>
+                <div class="card-value">{{ monthly_distributions }}</div>
+                <div class="card-footer">Distributions this month</div>
+            </div>
+            <div class="card">
+                <div class="card-header"><div>Beneficiaries Served</div><i class="fas fa-users"></i></div>
+                <div class="card-value">{{ monthly_beneficiaries }}</div>
+                <div class="card-footer">People served this month</div>
+            </div>
+            <div class="card">
+                <div class="card-header"><div>Food Items Distributed</div><i class="fas fa-warehouse"></i></div>
+                <div class="card-value">{{ monthly_food }} tons</div>
+                <div class="card-footer">Food distributed this month</div>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="action-buttons">
+            <button class="btn btn-primary" id="addDistributionBtn"><i class="fas fa-plus"></i> New Distribution</button>
+            <button class="btn btn-export" id="exportReportBtn"><i class="fas fa-download"></i> Export Report</button>
+        </div>
+
+        <!-- Distribution Table -->
+        <div class="data-table-container">
+            <h3>Recent Distributions</h3>
+            <table id="distributionsTable" class="display" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>ID</th><th>Date</th><th>Location</th><th>Beneficiaries</th><th>Food Items</th><th>Quantity</th><th>Status</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dist in distributions %}
+                    <tr>
+                        <td>D{{ "%03d" % dist.id }}</td>
+                        <td>{{ dist.distribution_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ dist.location }}</td>
+                        <td>{{ dist.beneficiary_count }}</td>
+                        <td>{{ dist.food_items }}</td>
+                        <td>{{ dist.total_quantity }} tons</td>
+                        <td><span class="badge badge-success">Completed</span></td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 5px 8px;"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-secondary" style="padding: 5px 8px;"><i class="fas fa-eye"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Record New Distribution Modal -->
+    <div class="modal" id="addDistributionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Record New Distribution</h3>
+                <button class="close-btn" id="closeDistributionModal">&times;</button>
+            </div>
+            <form action="{{ url_for('add_distribution') }}" method="POST">
+                <div class="form-group">
+                    <label for="distributionDate">Distribution Date</label>
+                    <input type="date" id="distributionDate" name="distributionDate" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="location">Location</label>
+                    <input type="text" id="location" name="location" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="beneficiaryCount">Number of Beneficiaries</label>
+                    <input type="number" id="beneficiaryCount" name="beneficiaryCount" class="form-control" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="foodItems">Food Items</label>
+                    <textarea id="foodItems" name="foodItems" class="form-control" rows="2" required></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="quantity">Quantity</label>
+                        <input type="number" id="quantity" name="quantity" class="form-control" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="unit">Unit</label>
+                        <select id="unit" name="unit" class="form-control" required>
+                            <option value="kg">Kilograms</option>
+                            <option value="tons">Tons</option>
+                            <option value="bags">Bags</option>
+                            <option value="liters">Liters</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" name="notes" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelDistributionBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Distribution</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Export Report Modal -->
+    <div class="modal" id="exportReportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Export Distribution Report</h3>
+                <button class="close-btn" id="closeExportModal">&times;</button>
+            </div>
+            <form id="exportForm">
+                <div class="form-group">
+                    <label for="dateRange">Date Range</label>
+                    <div class="date-range">
+                        <input type="date" id="startDate" class="form-control" placeholder="Start Date">
+                        <input type="date" id="endDate" class="form-control" placeholder="End Date">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Export Format</label>
+                    <div class="export-options">
+                        <div class="export-option" data-format="csv">
+                            <i class="fas fa-file-csv"></i>
+                            <div>CSV</div>
+                        </div>
+                        <div class="export-option" data-format="excel">
+                            <i class="fas fa-file-excel"></i>
+                            <div>Excel</div>
+                        </div>
+                        <div class="export-option" data-format="pdf">
+                            <i class="fas fa-file-pdf"></i>
+                            <div>PDF</div>
+                        </div>
+                        <div class="export-option" data-format="print">
+                            <i class="fas fa-print"></i>
+                            <div>Print</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="exportFormat" name="exportFormat" value="csv">
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelExportBtn">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="generateExportBtn">Generate Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTable with export buttons
+            var table = $('#distributionsTable').DataTable({
+                responsive: true,
+                pageLength: 5,
+                language: { search: "Search distributions:" },
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'collection',
+                        text: 'Export',
+                        buttons: [
+                            {
+                                extend: 'csv',
+                                text: 'Export as CSV',
+                                className: 'btn-export',
+                                title: 'Food_Distribution_Report'
+                            },
+                            {
+                                extend: 'excel',
+                                text: 'Export as Excel',
+                                className: 'btn-export',
+                                title: 'Food_Distribution_Report'
+                            },
+                            {
+                                extend: 'pdf',
+                                text: 'Export as PDF',
+                                className: 'btn-export',
+                                title: 'Food_Distribution_Report'
+                            },
+                            {
+                                extend: 'print',
+                                text: 'Print',
+                                className: 'btn-export',
+                                title: 'Food_Distribution_Report'
+                            }
+                        ]
+                    }
+                ]
+            });
+            
+            // Modal functionality
+            const distributionModal = document.getElementById('addDistributionModal');
+            const exportModal = document.getElementById('exportReportModal');
+            
+            // Open distribution modal
+            document.getElementById('addDistributionBtn').addEventListener('click', () => {
+                distributionModal.style.display = 'flex';
+            });
+            
+            // Open export modal
+            document.getElementById('exportReportBtn').addEventListener('click', () => {
+                // Set default date range to current month
+                const today = new Date();
+                const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                
+                document.getElementById('startDate').value = formatDate(firstDay);
+                document.getElementById('endDate').value = formatDate(lastDay);
+                
+                exportModal.style.display = 'flex';
+            });
+            
+            // Close modals
+            document.getElementById('closeDistributionModal').addEventListener('click', () => {
+                distributionModal.style.display = 'none';
+            });
+            
+            document.getElementById('closeExportModal').addEventListener('click', () => {
+                exportModal.style.display = 'none';
+            });
+            
+            document.getElementById('cancelDistributionBtn').addEventListener('click', () => {
+                distributionModal.style.display = 'none';
+            });
+            
+            document.getElementById('cancelExportBtn').addEventListener('click', () => {
+                exportModal.style.display = 'none';
+            });
+            
+            // Close modals when clicking outside
+            window.addEventListener('click', e => {
+                if (e.target === distributionModal) distributionModal.style.display = 'none';
+                if (e.target === exportModal) exportModal.style.display = 'none';
+            });
+            
+            // Export option selection
+            document.querySelectorAll('.export-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelectorAll('.export-option').forEach(el => {
+                        el.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    document.getElementById('exportFormat').value = this.getAttribute('data-format');
+                });
+            });
+            
+            // Generate export
+            document.getElementById('generateExportBtn').addEventListener('click', function() {
+                const format = document.getElementById('exportFormat').value;
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                
+                // Filter data based on date range if provided
+                if (startDate && endDate) {
+                    $.fn.dataTable.ext.search.push(
+                        function(settings, data, dataIndex) {
+                            const date = new Date(data[1]); // Date is in the second column
+                            const start = new Date(startDate);
+                            const end = new Date(endDate);
+                            end.setDate(end.getDate() + 1); // Include end date
+                            
+                            return date >= start && date <= end;
+                        }
+                    );
+                }
+                
+                // Trigger the export based on selected format
+                switch(format) {
+                    case 'csv':
+                        table.button('.buttons-csv').trigger();
+                        break;
+                    case 'excel':
+                        table.button('.buttons-excel').trigger();
+                        break;
+                    case 'pdf':
+                        table.button('.buttons-pdf').trigger();
+                        break;
+                    case 'print':
+                        table.button('.buttons-print').trigger();
+                        break;
+                }
+                
+                // Remove the filter after export
+                if (startDate && endDate) {
+                    $.fn.dataTable.ext.search.pop();
+                }
+                
+                // Close the modal
+                exportModal.style.display = 'none';
+            });
+            
+            // Helper function to format date as YYYY-MM-DD
+            function formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+        });
+    </script>
+</body>
+</html>

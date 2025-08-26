@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kwale FPM - Beneficiaries</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+    <style>
+        :root {
+            --primary-color: #2c7873;
+            --secondary-color: #6fb98f;
+            --accent-color: #f8b400;
+            --dark-color: #004445;
+            --light-color: #f8f9fa;
+            --sidebar-width: 250px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body { display: flex; min-height: 100vh; background-color: #f5f5f5; }
+
+        .sidebar {
+            width: var(--sidebar-width); background-color: var(--dark-color); color: white;
+            height: 100vh; position: fixed; transition: all 0.3s; z-index: 1000;
+        }
+        .sidebar-header { padding: 20px; background-color: rgba(0,0,0,0.1); text-align: center; }
+        .sidebar-header h2 { font-size: 20px; margin-bottom: 5px; }
+        .sidebar-header p { font-size: 12px; opacity: 0.8; }
+        .sidebar-menu { padding: 20px 0; }
+        .sidebar-menu ul { list-style: none; }
+        .sidebar-menu li { margin-bottom: 5px; }
+        .sidebar-menu a {
+            display: block; padding: 12px 20px; color: white; text-decoration: none;
+            transition: all 0.3s; font-size: 14px;
+        }
+        .sidebar-menu a:hover, .sidebar-menu a.active {
+            background-color: rgba(255,255,255,0.1); border-left: 3px solid var(--accent-color);
+        }
+        .sidebar-menu i { margin-right: 10px; width: 20px; text-align: center; }
+
+        .main-content { margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); padding: 20px; transition: all 0.3s; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; margin-bottom: 20px; border-bottom: 1px solid #eee; }
+        .header h1 { font-size: 24px; color: var(--dark-color); }
+        .user-info { display: flex; align-items: center; }
+        .user-info img { width: 40px; height: 40px; border-radius: 50%; margin-right: 10px; object-fit: cover; }
+        .user-details h4 { font-size: 14px; margin-bottom: 3px; }
+        .user-details p { font-size: 12px; color: #777; }
+
+        .action-buttons { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn {
+            padding: 10px 15px; border: none; border-radius: 5px; font-size: 14px;
+            font-weight: 500; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px;
+        }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover { background-color: var(--dark-color); }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-secondary:hover { background-color: #5a6268; }
+
+        .data-table-container {
+            background-color: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 20px; margin-bottom: 30px;
+        }
+        table.dataTable { width: 100% !important; border-collapse: collapse; }
+        table.dataTable thead th {
+            background-color: var(--primary-color); color: white; font-weight: 500;
+            padding: 12px 15px; text-align: left;
+        }
+        table.dataTable tbody td { padding: 12px 15px; border-bottom: 1px solid #eee; }
+        table.dataTable tbody tr:hover { background-color: rgba(44,120,115,0.05); }
+
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        .badge-success { background-color: #d4edda; color: #155724; }
+        .badge-warning { background-color: #fff3cd; color: #856404; }
+        .badge-danger { background-color: #f8d7da; color: #721c24; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content {
+            background-color: white; border-radius: 8px; width: 90%; max-width: 600px; max-height: 90vh;
+            overflow-y: auto; animation: modalFadeIn 0.3s ease-out;
+        }
+        @keyframes modalFadeIn { from { opacity:0; transform:translateY(-20px);} to {opacity:1; transform:translateY(0);} }
+        .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 18px; color: var(--dark-color); }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
+        .close-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #777; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 14px; color: #555; font-weight: 500; }
+        .form-control {
+            width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;
+        }
+        .form-control:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(44,120,115,0.2); outline: none; }
+        .form-row { display: flex; gap: 15px; }
+        .form-row .form-group { flex: 1; }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 0; overflow: hidden; }
+            .main-content { margin-left: 0; width: 100%; }
+            .form-row { flex-direction: column; gap: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Kwale FPM</h2>
+            <p>Management System</p>
+        </div>
+        <div class="sidebar-menu">
+            <ul>
+                <li><a href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('beneficiaries') }}" class="active"><i class="fas fa-users"></i> Beneficiaries</a></li>
+                <li><a href="{{ url_for('funds') }}"><i class="fas fa-money-bill-wave"></i> Fund Tracking</a></li>
+                <li><a href="{{ url_for('distributions') }}"><i class="fas fa-utensils"></i> Food Distribution</a></li>
+                <li><a href="{{ url_for('reports') }}"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                <li><a href="{{ url_for('settings') }}"><i class="fas fa-cog"></i> Settings</a></li>
+                <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <h1>Beneficiaries</h1>
+            <div class="user-info">
+                <img src="https://ui-avatars.com/api/?name={{ session.full_name }}" alt="User">
+                <div class="user-details">
+                    <h4>{{ session.full_name }}</h4>
+                    <p>{{ session.role|capitalize }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-primary" id="addBeneficiaryBtn">
+                <i class="fas fa-plus"></i> Add Beneficiary
+            </button>
+            <button class="btn btn-secondary" id="exportBtn">
+                <i class="fas fa-download"></i> Export
+            </button>
+        </div>
+
+        <!-- Beneficiaries Table -->
+        <div class="data-table-container">
+            <table id="beneficiariesTable" class="display" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>National ID</th>
+                        <th>Location</th>
+                        <th>Household</th>
+                        <th>Vulnerability</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for beneficiary in beneficiaries %}
+                    <tr>
+                        <td>{{ beneficiary.beneficiary_id }}</td>
+                        <td>{{ beneficiary.first_name }} {{ beneficiary.last_name }}</td>
+                        <td>{{ beneficiary.national_id }}</td>
+                        <td>{{ beneficiary.location }}</td>
+                        <td>{{ beneficiary.household_size }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if beneficiary.vulnerability_level == 'high' %}badge-danger
+                                {% elif beneficiary.vulnerability_level == 'medium' %}badge-warning
+                                {% else %}badge-success{% endif %}">
+                                {{ beneficiary.vulnerability_level|capitalize }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge 
+                                {% if beneficiary.status == 'active' %}badge-success
+                                {% else %}badge-secondary{% endif %}">
+                                {{ beneficiary.status|capitalize }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 5px 8px;">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-secondary" style="padding: 5px 8px;">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Beneficiary Modal -->
+    <div class="modal" id="addBeneficiaryModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Beneficiary</h3>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <form id="beneficiaryForm" action="{{ url_for('add_beneficiary') }}" method="POST">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="firstName">First Name</label>
+                            <input type="text" id="firstName" name="firstName" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" id="lastName" name="lastName" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="nationalId">National ID</label>
+                        <input type="text" id="nationalId" name="nationalId" class="form-control" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="dob">Date of Birth</label>
+                            <input type="date" id="dob" name="dob" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="gender">Gender</label>
+                            <select id="gender" name="gender" class="form-control" required>
+                                <option value="">Select Gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="householdSize">Household Size</label>
+                            <input type="number" id="householdSize" name="householdSize" class="form-control" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vulnerability">Vulnerability Level</label>
+                            <select id="vulnerability" name="vulnerability" class="form-control" required>
+                                <option value="">Select Level</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="location">Location</label>
+                        <input type="text" id="location" name="location" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Beneficiary</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JS Libraries -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+
+    <!-- DataTables Buttons -->
+    <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTable with buttons
+            var table = $('#beneficiariesTable').DataTable({
+                responsive: true,
+                pageLength: 10,
+                lengthMenu: [5, 10, 25, 50],
+                language: { search: "Search beneficiaries:" },
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'csv', text: '<i class="fas fa-file-csv"></i> CSV' },
+                    { extend: 'excel', text: '<i class="fas fa-file-excel"></i> Excel' },
+                    { extend: 'pdf', text: '<i class="fas fa-file-pdf"></i> PDF' },
+                    { extend: 'print', text: '<i class="fas fa-print"></i> Print' }
+                ]
+            });
+
+            // Custom Export Button trigger
+            $('#exportBtn').on('click', function() {
+                table.button().add(0, {
+                    extend: 'collection',
+                    text: 'Export Options',
+                    buttons: ['csv', 'excel', 'pdf', 'print']
+                });
+                table.button(0).trigger();
+            });
+
+            // Modal functionality
+            const modal = document.getElementById('addBeneficiaryModal');
+            const addBtn = document.getElementById('addBeneficiaryBtn');
+            const closeBtn = document.getElementById('closeModal');
+            const cancelBtn = document.getElementById('cancelBtn');
+
+            addBtn.addEventListener('click', () => { modal.style.display = 'flex'; });
+            closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+            cancelBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+            window.addEventListener('click', (e) => { if (e.target === modal) { modal.style.display = 'none'; }});
+        });
+    </script>
+</body>
+</html>
