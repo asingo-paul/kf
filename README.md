@@ -18,7 +18,7 @@ cd kf
 ### 2. Create a Virtual Environment
 
 ```bash
-python -m venv venv
+python -m venv .venv
 ```
 
 This will create a folder called `venv` in your project.
