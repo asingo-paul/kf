@@ -85,3 +85,4 @@ You’re all set! Your Flask app should now run on Windows.
 ## Open powershel as an administrator and run this command
    
     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+## use mysql workbench for your database
