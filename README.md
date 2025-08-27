@@ -28,7 +28,7 @@ This will create a folder called `venv` in your project.
 ### 3. Activate the Virtual Environment
 
 ```bash
-venv\Scripts\activate
+.venv\Scripts\activate
 ```
 
 Once activated, your terminal should show `(venv)` before the path.
